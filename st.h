@@ -81,6 +81,8 @@ void die(const char *, ...);
 void redraw(void);
 void draw(void);
 
+void externalpipe(const Arg *);
+void newterm(const Arg *);
 void printscreen(const Arg *);
 void printsel(const Arg *);
 void sendbreak(const Arg *);
@@ -112,6 +114,7 @@ void *xrealloc(void *, size_t);
 char *xstrdup(char *);
 
 /* config.h globals */
+extern char *externalpipe_sigusr1[];
 extern char *utmp;
 extern char *scroll;
 extern char *stty_args;
@@ -122,3 +125,4 @@ extern char *termname;
 extern unsigned int tabspaces;
 extern unsigned int defaultfg;
 extern unsigned int defaultbg;
+extern float alpha;
