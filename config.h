@@ -26,7 +26,7 @@ static int borderpx = 2;
 static char *shell = "/bin/sh";
 char *utmp = NULL;
 /* scroll program: to enable use a string like "scroll" */
-char *scroll = "scroll";
+char *scroll = NULL;
 char *stty_args = "stty raw pass8 nl -echo -iexten -cstopb 38400";
 
 /* identification sequence returned in DA and DECID */
@@ -49,6 +49,15 @@ static unsigned int tripleclicktimeout = 600;
 
 /* alt screens */
 int allowaltscreen = 1;
+
+/*
+ * draw latency range in ms - from new content/keypress/etc until drawing.
+ * within this range, st draws when content stops arriving (idle). mostly it's
+ * near minlatency, but it waits longer for slow updates to avoid partial draw.
+ * low minlatency will tear/flicker more, as it can "detect" idle too early.
+ */
+static double minlatency = 8;
+static double maxlatency = 33;
 
 /* frames per second st should at maximum draw to the screen */
 static unsigned int xfps = 120;
@@ -120,15 +129,14 @@ static const char *colorname[] = {
 	"#ebdbb2", /* 259 -> fg */
 };
 
-
 /*
  * Default colors (colorname index)
  * foreground, background, cursor, reverse cursor
  */
-unsigned int defaultfg = 259;
+static unsigned int defaultcs = 4;
+static unsigned int defaultrcs = 1;
 unsigned int defaultbg = 258;
-static unsigned int defaultcs = 256;
-static unsigned int defaultrcs = 257;
+unsigned int defaultfg = 259;
 
 /*
  * Default shape of cursor
@@ -154,45 +162,48 @@ static unsigned int mousefg = 7;
 static unsigned int mousebg = 0;
 
 /*
- * Xresources preferences to load at startup
- */
-ResourcePref resources[] = {
-		{ "color0",       STRING,  &colorname[0] },
-		{ "color1",       STRING,  &colorname[1] },
-		{ "color2",       STRING,  &colorname[2] },
-		{ "color3",       STRING,  &colorname[3] },
-		{ "color4",       STRING,  &colorname[4] },
-		{ "color5",       STRING,  &colorname[5] },
-		{ "color6",       STRING,  &colorname[6] },
-		{ "color7",       STRING,  &colorname[7] },
-		{ "color8",       STRING,  &colorname[8] },
-		{ "color9",       STRING,  &colorname[9] },
-		{ "color10",      STRING,  &colorname[10] },
-		{ "color11",      STRING,  &colorname[11] },
-		{ "color12",      STRING,  &colorname[12] },
-		{ "color13",      STRING,  &colorname[13] },
-		{ "color14",      STRING,  &colorname[14] },
-		{ "color15",      STRING,  &colorname[15] },
-		{ "background",   STRING,  &colorname[256] },
-		{ "foreground",   STRING,  &colorname[257] },
-		{ "cursorColor",  STRING,  &colorname[258] },
-		{ "termname",     STRING,  &termname },
-		{ "shell",        STRING,  &shell },
-		{ "xfps",         INTEGER, &xfps },
-		{ "actionfps",    INTEGER, &actionfps },
-		{ "blinktimeout", INTEGER, &blinktimeout },
-		{ "bellvolume",   INTEGER, &bellvolume },
-		{ "tabspaces",    INTEGER, &tabspaces },
-		{ "borderpx",     INTEGER, &borderpx },
-		{ "cwscale",      FLOAT,   &cwscale },
-		{ "chscale",      FLOAT,   &chscale },
-};
-
-/*
  * Color used to display font attributes when fontconfig selected a font which
  * doesn't match the ones requested.
  */
 static unsigned int defaultattr = 11;
+
+/*
+ * Xresources preferences to load at startup
+ */
+ResourcePref resources[] = {
+		{ "font",           STRING,  &font },
+		{ "color0",         STRING,  &colorname[0] },
+		{ "color1",         STRING,  &colorname[1] },
+		{ "color2",         STRING,  &colorname[2] },
+		{ "color3",         STRING,  &colorname[3] },
+		{ "color4",         STRING,  &colorname[4] },
+		{ "color5",         STRING,  &colorname[5] },
+		{ "color6",         STRING,  &colorname[6] },
+		{ "color7",         STRING,  &colorname[7] },
+		{ "color8",         STRING,  &colorname[8] },
+		{ "color9",         STRING,  &colorname[9] },
+		{ "color10",        STRING,  &colorname[10] },
+		{ "color11",        STRING,  &colorname[11] },
+		{ "color12",        STRING,  &colorname[12] },
+		{ "color13",        STRING,  &colorname[13] },
+		{ "color14",        STRING,  &colorname[14] },
+		{ "color15",        STRING,  &colorname[15] },
+		{ "background",     STRING,  &colorname[258] },
+		{ "foreground",     STRING,  &colorname[259] },
+		{ "cursorColor",    STRING,  &colorname[256] },
+		{ "revCursorColor", STRING,  &colorname[257] },
+		{ "termname",       STRING,  &termname },
+		{ "shell",          STRING,  &shell },
+		{ "xfps",           INTEGER, &xfps },
+		{ "actionfps",      INTEGER, &actionfps },
+		{ "blinktimeout",   INTEGER, &blinktimeout },
+		{ "bellvolume",     INTEGER, &bellvolume },
+		{ "tabspaces",      INTEGER, &tabspaces },
+		{ "borderpx",       INTEGER, &borderpx },
+		{ "cwscale",        FLOAT,   &cwscale },
+		{ "chscale",        FLOAT,   &chscale },
+		{ "alpha",          FLOAT,   &alpha },
+};
 
 /*
  * Force mouse select/shortcuts while mask is active (when MODE_MOUSE is set).
@@ -207,6 +218,8 @@ static uint forcemousemod = ShiftMask;
  */
 static MouseShortcut mshortcuts[] = {
 	/* mask                 button   function        argument       release */
+	{ XK_ANY_MOD,           Button4, kscrollup,      {.i = 1},      0, /* !alt */ -1 },
+	{ XK_ANY_MOD,           Button5, kscrolldown,    {.i = 1},      0, /* !alt */ -1 },
 	{ XK_ANY_MOD,           Button2, selpaste,       {.i = 0},      1 },
 	{ XK_ANY_MOD,           Button4, ttysend,        {.s = "\031"} },
 	{ XK_ANY_MOD,           Button5, ttysend,        {.s = "\005"} },
@@ -239,6 +252,8 @@ static Shortcut shortcuts[] = {
 	{ TERMMOD,              XK_P,           selpaste,       {.i =  0} },
 	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
 	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
+	{ ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} },
+	{ ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
 	{ TERMMOD,              XK_Up,          zoom,           {.f = +1} },
 	{ TERMMOD,              XK_Down,        zoom,           {.f = -1} },
 	{ TERMMOD,              XK_K,           zoom,           {.f = +1} },
