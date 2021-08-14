@@ -6,11 +6,12 @@ char *externalpipe_sigusr1[] = {"/bin/sh", "-c", "externalpipe_buffer.sh st_stri
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "monospace:pixelsize=24:antialias=true:autohint:true:hintstyle:hintfull";
+static char *font = "monospace:pixelsize=28:antialias=true:autohint:true:hintstyle:hintfull";
 /* Spare fonts */
 static char *font2[] = {
-    "WenQuanYi Micro Hei:pixelsize=24:antialias=true:autohint:false:hint:ture:hintstyle:hintfull", 
     "DejaVuSansMono Nerd Font:pixelsize=24:antialias=true:autohint:false:hint:ture:hintstyle:hintfull", 
+    "Sarasa Mono Slab SC:pixelsize=28:antialias=true:autohint:false:hint:ture:hintstyle:hintfull", 
+    "DejaVuSansMono Nerd Font:pixelsize=28:antialias=true:autohint:false:hint:ture:hintstyle:hintfull", 
 };
 
 static int borderpx = 2;
@@ -23,7 +24,7 @@ static int borderpx = 2;
  * 4: value of shell in /etc/passwd
  * 5: value of shell in config.h
  */
-static char *shell = "/bin/sh";
+static char *shell = "bin/sh";
 char *utmp = NULL;
 /* scroll program: to enable use a string like "scroll" */
 char *scroll = NULL;
