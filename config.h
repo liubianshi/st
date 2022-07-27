@@ -9,7 +9,8 @@ char *externalpipe_sigusr1[] = {"/bin/sh", "-c", "externalpipe_buffer.sh st_stri
 static char *font = "monospace:pixelsize=28:antialias=true:autohint:true:hintstyle:hintfull";
 /* Spare fonts */
 static char *font2[] = {
-    "DejaVuSansMono Nerd Font:pixelsize=24:antialias=true:autohint:false:hint:ture:hintstyle:hintfull", 
+    "LXGW WenKai Mono:pixelsize=28:antialias=true:autohint:false:hint:ture:hintstyle:hintfull", 
+    "DejaVuSansMono Nerd Font:pixelsize=26:antialias=true:autohint:false:hint:ture:hintstyle:hintfull", 
     "Sarasa Mono Slab SC:pixelsize=28:antialias=true:autohint:false:hint:ture:hintstyle:hintfull", 
     "DejaVuSansMono Nerd Font:pixelsize=28:antialias=true:autohint:false:hint:ture:hintstyle:hintfull", 
 };
@@ -34,7 +35,7 @@ char *stty_args = "stty raw pass8 nl -echo -iexten -cstopb 38400";
 char *vtiden = "\033[?6c";
 
 /* Kerning / character bounding-box multipliers */
-static float cwscale = 1.0;
+static float cwscale = 1.02;
 static float chscale = 1.5;
 
 /*
@@ -249,6 +250,8 @@ static char *copyurlcmd[] = { "/bin/sh", "-c",
 
 static char *copyoutput[] = { "/bin/sh", "-c", "st-copyout", "externalpipe", NULL };
 
+static char *editscreen[] = { "/bin/sh", "-c", "st-editscreen", "externalpipe", "NULL" };
+
 static Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
 	{ AltMask,              XK_c,           normalMode,     {.i =  0} },
@@ -273,6 +276,7 @@ static Shortcut shortcuts[] = {
 	{ TERMMOD,              XK_U,           zoom,           {.f = +2} },
 	{ TERMMOD,              XK_D,           zoom,           {.f = -2} },
     { TERMMOD,              XK_Return,      newterm,        {.i =  0} },
+	{ TERMMOD,              XK_E,           externalpipe,   {.v = editscreen } },
 	{ TERMMOD,              XK_L,           externalpipe,   {.v = openurlcmd } },
 	{ TERMMOD,              XK_Y,           externalpipe,   {.v = copyurlcmd } },
     { TERMMOD,              XK_O,           externalpipe,   {.v = copyoutput } },
